@@ -1,3 +1,6 @@
+
+
+-- Dao van to
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
@@ -63,7 +66,7 @@ end component uart;
 --
 
 signal amm_ready			:	std_logic;
-signal amm_read				:	std_logic;		
+signal amm_read				:	std_logic	:= '0';		
 signal amm_write			:	std_logic;			
 signal amm_address			:	std_logic_vector(29 downto 0) := (others => '0');		
 signal amm_readdata			:	std_logic_vector(255 downto 0);  	
@@ -105,6 +108,12 @@ signal int_count_w          : integer := 0;
 signal int_count_r          : integer := 0;
 
 signal data_temp			: std_logic_vector(255 downto 0) := (others => '0');
+signal switch_state			: integer := 0;
+
+
+signal threshold_read		: integer := 20;
+signal threshold_write		: integer := 10;
+
 
 begin
 
@@ -176,37 +185,6 @@ uart_tx		<=	tx;
 read_write_cmd		<=	w when crc_out32 < threshold else
 						r;
 --
-
-read_valid:	process(clk)
-begin
-	if rising_edge(clk) then
-		if reset = '1' then
-			rd_state	<=	0;
-			count_r		<=	(others => '0');
-		else
-			case rd_state is
-				when 0	=>
-					if local_cal_success = '1' then
-						rd_state <= 1;
-					end if;
-				when 1	=>
-					if read_write_cmd	= r then
-						rd_state <= 2;
-						amm_read <= '1';
-					end if;
-				when 2	=>
-					if amm_ready = '1' then
-						count_r  <= count_r + 1;
-						rd_state <= 1;
-						amm_read <= '0';
-					end if;
-				when others => 
-					rd_state	<=	1;
-			end case;
-		end if;
-	end if;
-end process;
-
 write_valid: process(clk) 
 begin
 	if rising_edge(clk) then
@@ -220,9 +198,11 @@ begin
 						wr_state <= 1;
 					end if;
 				when 1 =>
-					if read_write_cmd = w then
+					if count_w	< threshold_write then
 						wr_state  <= 2;
 						amm_write <= '1';
+					else
+						wr_state  <= 3;
 					end if;
 				when 2 =>
 					if amm_ready = '1' then
@@ -230,6 +210,8 @@ begin
 						wr_state <= 1;
 						amm_write <= '0';
 					end if;
+				when 3 =>
+						switch_state <= 1;
 				when others =>
 						wr_state <= 1;
 			end case;
@@ -237,13 +219,58 @@ begin
 	end if;
 end process;
 
+--
+
+read_valid:	process(clk)
+begin
+	if rising_edge(clk) then
+		if reset = '1' then
+			rd_state	<=	0;
+			count_r		<=	(others => '0');
+		else
+			case rd_state is
+				when 0	=>
+					if switch_state	= 1 then
+						rd_state <= 1;
+					end if;
+				when 1	=>
+					if count_r	< threshold_read then
+						rd_state <= 2;
+						amm_read <= '1';
+					else
+						rd_state <= 3;
+					end if;
+				when 2	=>
+					if amm_ready = '1' then
+						if count_r <= count_w then
+							count_r  <= count_r + 1;
+							rd_state <= 1;
+							amm_read <= '0';
+						else
+							count_r	 <= (others => '0');
+							rd_state <= 1;
+							amm_read <= '0';
+						end if;		
+					end if;	
+				when 3	=>
+					
+				
+				when others => 
+					rd_state	<=	1;
+			end case;
+		end if;
+	end if;
+end process;
+
+--
+
 int_count_w     <=  to_integer(unsigned(count_w));
 int_count_r     <=  to_integer(unsigned(count_r));
 
 --ghi dia chi
 amm_address     <=  std_logic_vector(to_unsigned(int_count_w * 400,amm_address'length)) when amm_write = '1' else
-		    std_logic_vector(to_unsigned(int_count_r * 400,amm_address'length)) when amm_read  = '1' else
-		    (others => '0'); 
+					std_logic_vector(to_unsigned(int_count_r * 400,amm_address'length)) when amm_read  = '1' else
+					(others => '0'); 
 
 -- ghi du lieu			
 amm_writedata	<=	data_temp + crc_out32 when amm_write = '1' else
