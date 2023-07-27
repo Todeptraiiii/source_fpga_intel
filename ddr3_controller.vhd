@@ -1,6 +1,3 @@
-
-
--- Dao van to
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
@@ -268,8 +265,8 @@ int_count_w     <=  to_integer(unsigned(count_w));
 int_count_r     <=  to_integer(unsigned(count_r));
 
 --ghi dia chi
-amm_address     <=  std_logic_vector(to_unsigned(int_count_w * 400,amm_address'length)) when amm_write = '1' else
-					std_logic_vector(to_unsigned(int_count_r * 400,amm_address'length)) when amm_read  = '1' else
+amm_address     <=  std_logic_vector(to_unsigned(int_count_w * 256,amm_address'length)) when amm_write = '1' else
+					std_logic_vector(to_unsigned(int_count_r * 256,amm_address'length)) when amm_read  = '1' else
 					(others => '0'); 
 
 -- ghi du lieu			
