@@ -64,7 +64,7 @@ end component uart;
 
 signal amm_ready			:	std_logic;
 signal amm_read				:	std_logic	:= '0';		
-signal amm_write			:	std_logic	:= '0';			
+signal amm_write			:	std_logic;			
 signal amm_address			:	std_logic_vector(29 downto 0) := (others => '0');		
 signal amm_readdata			:	std_logic_vector(255 downto 0);  	
 signal amm_writedata		:	std_logic_vector(255 downto 0) := (others => '0');     
