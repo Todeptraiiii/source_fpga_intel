@@ -7,3 +7,5 @@
 temp/
 
 # Bo qua tat ca cac tep .log trong bat ky thu muc nao
+
+**/*.log
