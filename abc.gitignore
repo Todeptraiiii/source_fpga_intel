@@ -1,0 +1,9 @@
+# bo qua tep .txt
+
+*.txt
+
+# Bo qua thu muc temp
+
+temp/
+
+# Bo qua tat ca cac tep .log trong bat ky thu muc nao
