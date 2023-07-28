@@ -105,12 +105,15 @@ signal int_count_w          : integer := 0;
 signal int_count_r          : integer := 0;
 
 signal data_temp			: std_logic_vector(255 downto 0) := (others => '0');
+signal reset1				: std_logic	:= '0';
 signal switch_state			: integer := 0;
 
 
 signal threshold_read		: integer := 20;
 signal threshold_write		: integer := 10;
 
+signal loop_read			: integer := 0;
+signal temp					: integer := 0;
 
 begin
 
@@ -200,6 +203,7 @@ begin
 						amm_write <= '1';
 					else
 						wr_state  <= 3;
+						
 					end if;
 				when 2 =>
 					if amm_ready = '1' then
@@ -218,10 +222,13 @@ end process;
 
 --
 
+loop_read	<=	threshold_read / threshold_write - 1;
+
 read_valid:	process(clk)
 begin
 	if rising_edge(clk) then
-		if reset = '1' then
+		if reset = '1' or reset1 = '1' then
+			reset1		<= '0';
 			rd_state	<=	0;
 			count_r		<=	(others => '0');
 		else
@@ -231,33 +238,33 @@ begin
 						rd_state <= 1;
 					end if;
 				when 1	=>
-					if count_r	< threshold_read then
+					if count_r	< threshold_write then
 						rd_state <= 2;
 						amm_read <= '1';
 					else
 						rd_state <= 3;
+						temp	 <= temp + 1;
+						
 					end if;
 				when 2	=>
 					if amm_ready = '1' then
-						if count_r <= count_w then
-							count_r  <= count_r + 1;
-							rd_state <= 1;
-							amm_read <= '0';
-						else
-							count_r	 <= (others => '0');
-							rd_state <= 1;
-							amm_read <= '0';
-						end if;		
+						count_r  <= count_r + 1;
+						rd_state <= 1;
+						amm_read <= '0';	
 					end if;	
 				when 3	=>
+					if temp	<= loop_read then
+						reset1		<= '1';
+					end if;
 					
-				
 				when others => 
 					rd_state	<=	1;
 			end case;
 		end if;
 	end if;
 end process;
+
+
 
 --
 
