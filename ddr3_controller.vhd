@@ -14,7 +14,7 @@ entity ddr3_controller is
 	amm_read_0		: out	std_logic;
 	amm_write_0		: out	std_logic;
 	amm_address_0		: out 	std_logic_vector(29 downto 0) ;	
-	amm_readdata_0  	: in  	std_logic_vector(255 downto 0) := (others => '0');
+	amm_readdata_0  	: in  	std_logic_vector(255 downto 0):= (others => '0');
 	amm_writedata_0     	: out 	std_logic_vector(255 downto 0);       
 	amm_burstcount_0    	: out 	std_logic_vector(6 downto 0)  ;         
 	amm_byteenable_0    	: out 	std_logic_vector(31 downto 0) ;        
@@ -96,8 +96,12 @@ signal i                    : integer := -1;
 
 type state_type is (r,w);
 signal read_write_cmd		: state_type := r;
-signal crc_out64			: std_logic_vector(63 downto 0) := (others => '0');
-signal crc_out32			: std_logic_vector(31 downto 0) := (others => '0');
+signal crc_out64_r			: std_logic_vector(63 downto 0) := (others => '0');
+signal crc_out64_w			: std_logic_vector(63 downto 0) := (others => '0');
+signal crc_out64_c			: std_logic_vector(63 downto 0) := (others => '0');
+signal crc_out32_w			: std_logic_vector(31 downto 0) := (others => '0');
+signal crc_out32_r			: std_logic_vector(31 downto 0) := (others => '0');
+signal crc_out32_c			: std_logic_vector(31 downto 0) := (others => '0');
 signal time_1s              : std_logic := '1';
 signal data 				: std_logic_vector(63 downto 0) := (others => '0');
 
@@ -106,6 +110,7 @@ signal int_count_r          : integer := 0;
 
 signal data_temp			: std_logic_vector(255 downto 0) := (others => '0');
 signal reset1				: std_logic	:= '0';
+signal reset_crc			: std_logic := '0';
 signal switch_state			: integer := 0;
 
 
@@ -114,6 +119,16 @@ signal threshold_write		: integer := 10;
 
 signal loop_read			: integer := 0;
 signal temp					: integer := 0;
+--
+signal temp1				: integer := 0;
+signal cnt_w				: integer := 0;
+--
+signal reset_c				: std_logic := '0';
+signal reset_crc3			: std_logic := '0';
+signal count_c				: std_logic_vector(63 downto 0) := (others => '0');
+
+signal amm_read_ready		:	std_logic	:= '0';		
+signal amm_write_ready		:	std_logic	:= '0';
 
 begin
 
@@ -162,7 +177,7 @@ end process;
 --
 
 
-crc_flow_hash64_inst: crc_flow_hash64
+crc_flow_hash64_inst1: crc_flow_hash64
 generic map 
     (
     init_sip    =>  X"0000_0000_0000_0000_0000_0000_0808_0808"
@@ -171,19 +186,52 @@ port map
 	(
 	reset		=>	reset,
 	clk			=>	clk,    
-	crc_en		=>	'1', 
-	crc_out		=>	crc_out64
+	crc_en		=>	amm_write_ready, 
+	crc_out		=>	crc_out64_w
+	);
+
+crc_flow_hash64_inst2: crc_flow_hash64
+generic map 
+    (
+    init_sip    =>  X"0000_0000_0000_0000_0000_0000_0808_0808"
+    )
+port map
+	(
+	reset		=>	reset_crc,
+	clk			=>	clk,    
+	crc_en		=>	amm_read_ready, 
+	crc_out		=>	crc_out64_r
+	);	
+	
+crc_flow_hash64_inst3: crc_flow_hash64
+generic map 
+    (
+    init_sip    =>  X"0000_0000_0000_0000_0000_0000_0808_0808"
+    )
+port map
+	(
+	reset		=>	reset_c,
+	clk			=>	clk,    
+	crc_en		=>	amm_readdatavalid, 
+	crc_out		=>	crc_out64_c
 	);
 
 
-
 reset		<=	not resetn ;
-crc_out32	<=	crc_out64(31 downto 0);
+reset_crc	<=	reset1 or reset;
+reset_c		<=	reset or reset_crc3;
+
+crc_out32_c	<=	crc_out64_c(31 downto 0);
+crc_out32_w	<=	crc_out64_w(31 downto 0);
+crc_out32_r	<=	crc_out64_r(31 downto 0);
 uart_tx		<=	tx;
 
+amm_read_ready	<=	amm_ready and amm_read;
+amm_write_ready	<=	amm_write and amm_ready;
+
 --
-read_write_cmd		<=	w when crc_out32 < threshold else
-						r;
+--read_write_cmd		<=	w when crc_out32 < threshold else
+--						r;
 --
 write_valid: process(clk) 
 begin
@@ -263,26 +311,81 @@ begin
 		end if;
 	end if;
 end process;
+--
+cnt_cmd_w: process(clk)
+begin
+	if rising_edge(clk) then
+		if reset = '1' then
+			cnt_w <= 0;
+		elsif amm_readdatavalid = '1' then
+			if cnt_w < 10 then
+				cnt_w	<= cnt_w + 1;
+			else
+				cnt_w	<= 0;
+			end if;
+		end if;
+	end if;
+end process;
 
+reset_n_times: process(clk)
+begin
+	if rising_edge(clk) then
+		if reset = '1' then
+			temp1 		<= 0;
+			reset_crc3	<= '0';
+		else
+			case temp1 is
+				when 0	=>
+					if cnt_w = 9 then
+						reset_crc3 <= '1';
+						temp1	   <= 1;
+					end if;
+				when 1	=>
+					reset_crc3 <= '0';
+					temp1	   <=  0;
+				when others =>
+			end case;
+		end if;
+	end if;
+end process;
 
 
 --
 
-int_count_w     <=  to_integer(unsigned(count_w));
+compare_data: process(clk)
+begin
+	if rising_edge(clk) then
+		if reset = '1' then
+			count_c <= (others => '0');
+		else
+			if amm_readdatavalid = '1' then
+				if amm_readdata = crc_out32_c then
+					count_c <= count_c + 1;
+				end if;
+			end if;
+		end if;
+	end if;
+end process;
+
+
+int_count_w     <=  to_integer(unsigned(count_w)) when count_c /= 0 else
+					int_count_w;
 int_count_r     <=  to_integer(unsigned(count_r));
 
---ghi dia chi
-amm_address     <=  std_logic_vector(to_unsigned(int_count_w * 256,amm_address'length)) when amm_write = '1' else
-					std_logic_vector(to_unsigned(int_count_r * 256,amm_address'length)) when amm_read  = '1' else
+--ghi dia chi 
+amm_address     <=  crc_out32_w(29 downto 4) & X"0" when amm_write = '1' and amm_ready = '1' else
+					crc_out32_r(29 downto 4) & X"0" when amm_read  = '1' and amm_ready = '1' else
 					(others => '0'); 
 
 -- ghi du lieu			
-amm_writedata	<=	data_temp + crc_out32 when amm_write = '1' else
+amm_writedata	<=	data_temp + crc_out32_w when amm_write = '1' and amm_ready = '1' else
 					(others => '0');
-
 --
 
-amm_ready	  <=	amm_ready_0;
+
+
+
+amm_ready	  		<=	amm_ready_0;
 amm_readdata	  <=	amm_readdata_0;
 amm_readdatavalid <=	amm_readdatavalid_0;
 
@@ -290,7 +393,7 @@ amm_read_0	 <=	amm_read;
 amm_write_0      <=	amm_write;
 amm_address_0	 <=	amm_address;
 amm_writedata_0	 <=	amm_writedata;
-amm_burstcount_0 <= 	"0000001";
+amm_burstcount_0 <= "0000001";
 amm_byteenable	 <=	(others => '1');
 
 amm_byteenable_0 <= amm_byteenable;
