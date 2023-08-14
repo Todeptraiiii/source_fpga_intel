@@ -114,7 +114,7 @@ signal reset_crc			: std_logic := '0';
 signal switch_state			: integer := 0;
 
 
-signal threshold_read		: integer := 20;
+signal threshold_read		: integer := 50;
 signal threshold_write		: integer := 10;
 
 signal loop_read			: integer := 0;
@@ -127,8 +127,11 @@ signal reset_c				: std_logic := '0';
 signal reset_crc3			: std_logic := '0';
 signal count_c				: std_logic_vector(63 downto 0) := (others => '0');
 
-signal amm_read_ready		:	std_logic	:= '0';		
-signal amm_write_ready		:	std_logic	:= '0';
+signal amm_read_ready		: std_logic	:= '0';		
+signal amm_write_ready		: std_logic	:= '0';
+signal s_amm_readdatavalid	: std_logic := '0';
+signal cnt_block			: integer := 0;
+signal number_of_blocks		: integer := 2;
 
 begin
 
@@ -216,7 +219,6 @@ port map
 	crc_out		=>	crc_out64_c
 	);
 
-
 reset		<=	not resetn ;
 reset_crc	<=	reset1 or reset;
 reset_c		<=	reset or reset_crc3;
@@ -233,6 +235,8 @@ amm_write_ready	<=	amm_write and amm_ready;
 --read_write_cmd		<=	w when crc_out32 < threshold else
 --						r;
 --
+
+
 write_valid: process(clk) 
 begin
 	if rising_edge(clk) then
@@ -255,9 +259,15 @@ begin
 					end if;
 				when 2 =>
 					if amm_ready = '1' then
-						count_w  <= count_w + 1;
-						wr_state <= 1;
 						amm_write <= '0';
+						if cnt_block < number_of_blocks  then
+							cnt_block <= cnt_block + 1;
+							count_w   <= count_w + 1;
+						else
+							cnt_block <= 0;
+							wr_state  <= 1;
+						end if;
+						
 					end if;
 				when 3 =>
 						switch_state <= 1;
@@ -315,7 +325,7 @@ end process;
 cnt_cmd_w: process(clk)
 begin
 	if rising_edge(clk) then
-		if reset = '1' then
+		if reset_c = '1' then
 			cnt_w <= 0;
 		elsif amm_readdatavalid = '1' then
 			if cnt_w < 10 then
@@ -330,7 +340,7 @@ end process;
 reset_n_times: process(clk)
 begin
 	if rising_edge(clk) then
-		if reset = '1' then
+		if reset_c = '1' then
 			temp1 		<= 0;
 			reset_crc3	<= '0';
 		else
@@ -368,7 +378,7 @@ begin
 end process;
 
 
-int_count_w     <=  to_integer(unsigned(count_w)) when count_c /= 0 else
+int_count_w     <=  to_integer(unsigned(count_w)) when count_c /= 0 and temp1 = 1 else
 					int_count_w;
 int_count_r     <=  to_integer(unsigned(count_r));
 
@@ -376,24 +386,21 @@ int_count_r     <=  to_integer(unsigned(count_r));
 amm_address     <=  crc_out32_w(29 downto 4) & X"0" when amm_write = '1' and amm_ready = '1' else
 					crc_out32_r(29 downto 4) & X"0" when amm_read  = '1' and amm_ready = '1' else
 					(others => '0'); 
-
+					
 -- ghi du lieu			
 amm_writedata	<=	data_temp + crc_out32_w when amm_write = '1' and amm_ready = '1' else
 					(others => '0');
---
-
-
-
-
-amm_ready	  		<=	amm_ready_0;
+					
+					
+amm_ready	  	  <=	amm_ready_0;
 amm_readdata	  <=	amm_readdata_0;
 amm_readdatavalid <=	amm_readdatavalid_0;
 
-amm_read_0	 <=	amm_read;
+amm_read_0	 	 <=	amm_read;
 amm_write_0      <=	amm_write;
 amm_address_0	 <=	amm_address;
 amm_writedata_0	 <=	amm_writedata;
-amm_burstcount_0 <= "0000001";
+amm_burstcount_0 <= "0000010"; -- 2 block
 amm_byteenable	 <=	(others => '1');
 
 amm_byteenable_0 <= amm_byteenable;
