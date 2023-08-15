@@ -33,14 +33,15 @@ use IEEE.STD_LOGIC_ARITH.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity ddr3_data_gen is
+entity ddr3_data_gen_2 is
 Port (
-
     --
-    S_AXI_0_araddr          : out    STD_LOGIC_VECTOR ( 29 downto 0 );
+    S_AXI_0_araddr          : out    STD_LOGIC_VECTOR ( 30 downto 0 );
     S_AXI_0_arburst         : out    STD_LOGIC_VECTOR ( 1 downto 0 );
     S_AXI_0_arcache         : out    STD_LOGIC_VECTOR ( 3 downto 0 );
+    
     S_AXI_0_arid            : out    STD_LOGIC_VECTOR ( 3 downto 0 );
+    
     S_AXI_0_arlen           : out    STD_LOGIC_VECTOR ( 7 downto 0 );
     S_AXI_0_arlock          : out    STD_LOGIC;
     S_AXI_0_arprot          : out    STD_LOGIC_VECTOR ( 2 downto 0 );
@@ -48,8 +49,7 @@ Port (
     S_AXI_0_arready         : in     STD_LOGIC;
     S_AXI_0_arsize          : out    STD_LOGIC_VECTOR ( 2 downto 0 );
     S_AXI_0_arvalid         : out    STD_LOGIC;
-    --  
-    S_AXI_0_awaddr          : out    STD_LOGIC_VECTOR ( 29 downto 0 );
+    S_AXI_0_awaddr          : out    STD_LOGIC_VECTOR ( 30 downto 0 );
     S_AXI_0_awburst         : out    STD_LOGIC_VECTOR ( 1 downto 0 );
     S_AXI_0_awcache         : out    STD_LOGIC_VECTOR ( 3 downto 0 );
     S_AXI_0_awid            : out    STD_LOGIC_VECTOR ( 3 downto 0 );
@@ -60,58 +60,59 @@ Port (
     S_AXI_0_awready         : in     STD_LOGIC;
     S_AXI_0_awsize          : out    STD_LOGIC_VECTOR ( 2 downto 0 );
     S_AXI_0_awvalid         : out    STD_LOGIC;
-    --
     S_AXI_0_bid             : in     STD_LOGIC_VECTOR ( 3 downto 0 );
     S_AXI_0_bready          : out    STD_LOGIC;
     S_AXI_0_bresp           : in     STD_LOGIC_VECTOR ( 1 downto 0 );
     S_AXI_0_bvalid          : in     STD_LOGIC;
-    S_AXI_0_rdata           : in     STD_LOGIC_VECTOR ( 255 downto 0 );
+    S_AXI_0_rdata           : in     STD_LOGIC_VECTOR ( 511 downto 0 );
     S_AXI_0_rid             : in     STD_LOGIC_VECTOR ( 3 downto 0 );
     S_AXI_0_rlast           : in     STD_LOGIC;
     S_AXI_0_rready          : out    STD_LOGIC;
     S_AXI_0_rresp           : in     STD_LOGIC_VECTOR ( 1 downto 0 );
     S_AXI_0_rvalid          : in     STD_LOGIC;
-    S_AXI_0_wdata           : out    STD_LOGIC_VECTOR ( 255 downto 0 );
+    S_AXI_0_wdata           : out    STD_LOGIC_VECTOR ( 511 downto 0 );
     S_AXI_0_wlast           : out    STD_LOGIC;
     S_AXI_0_wready          : in     STD_LOGIC;
-    S_AXI_0_wstrb           : out    STD_LOGIC_VECTOR ( 31 downto 0 );
+    S_AXI_0_wstrb           : out    STD_LOGIC_VECTOR ( 63 downto 0 );
     S_AXI_0_wvalid          : out    STD_LOGIC;
     init_calib_complete_0   : in     STD_LOGIC;
     reset_rtl_0             : in     STD_LOGIC;
     ui_clk_0                : in     STD_LOGIC;
     
+    
     CLK_50M                 : in     STD_LOGIC;
-    UART_TX                 : out    STD_LOGIC;
-    UART_RX                 : in     STD_LOGIC
+    S_CHECK                 : out    STD_LOGIC_VECTOR(31 downto 0)
 );
-end ddr3_data_gen;
+end ddr3_data_gen_2;
 
-architecture Behavioral of ddr3_data_gen is
+architecture Behavioral of ddr3_data_gen_2 is
 
 
-
-component uart is 
-   GENERIC(
-    clk_freq  :  INTEGER    := 50_000_000;  --frequency of system clock in Hertz
-    baud_rate :  INTEGER    := 19_200;      --data link baud rate in bits/second
-    os_rate   :  INTEGER    := 16;          --oversampling rate to find center of receive bits (in samples per baud period)
-    d_width   :  INTEGER    := 8;           --data bus width
-    parity    :  INTEGER    := 0;           --0 for no parity, 1 for parity
-    parity_eo :  STD_LOGIC  := '0');        --'0' for even, '1' for odd parity
-  PORT(
-    clk    :  IN   STD_LOGIC;                             --system clock
-    reset_n  :  IN   STD_LOGIC;                             --ascynchronous reset
-    tx_ena   :  IN   STD_LOGIC;                             --initiate transmission
-    tx_data  :  IN   STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --data to transmit
-    rx       :  IN   STD_LOGIC;                             --receive pin
-    rx_busy  :  OUT  STD_LOGIC;                             --data reception in progress
-    rx_error :  OUT  STD_LOGIC;                             --start, parity, or stop bit error detected
-    rx_data  :  OUT  STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --data received
-    tx_busy  :  OUT  STD_LOGIC;                             --transmission in progress
-    tx       :  OUT  STD_LOGIC);  
-end component;
+--component uart is 
+--   GENERIC(
+--    clk_freq  :  INTEGER    := 50_000_000;  --frequency of system clock in Hertz
+--    baud_rate :  INTEGER    := 19_200;      --data link baud rate in bits/second
+--    os_rate   :  INTEGER    := 16;          --oversampling rate to find center of receive bits (in samples per baud period)
+--    d_width   :  INTEGER    := 8;           --data bus width
+--    parity    :  INTEGER    := 0;           --0 for no parity, 1 for parity
+--    parity_eo :  STD_LOGIC  := '0');        --'0' for even, '1' for odd parity
+--  PORT(
+--    clk    :  IN   STD_LOGIC;                             --system clock
+--    reset_n  :  IN   STD_LOGIC;                             --ascynchronous reset
+--    tx_ena   :  IN   STD_LOGIC;                             --initiate transmission
+--    tx_data  :  IN   STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --data to transmit
+--    rx       :  IN   STD_LOGIC;                             --receive pin
+--    rx_busy  :  OUT  STD_LOGIC;                             --data reception in progress
+--    rx_error :  OUT  STD_LOGIC;                             --start, parity, or stop bit error detected
+--    rx_data  :  OUT  STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --data received
+--    tx_busy  :  OUT  STD_LOGIC;                             --transmission in progress
+--    tx       :  OUT  STD_LOGIC);  
+--end component;
 
 component crc_flow_hash64 is
+  generic (
+    init_sip : std_logic_vector(127 downto 0)
+  );
   Port 
   (
   reset     : in std_logic;
@@ -121,9 +122,15 @@ component crc_flow_hash64 is
   );
 end component crc_flow_hash64;
 
+signal fifo_din     : std_logic_vector (63 downto 0) := (others => '0');
+signal fifo_wr_en   : std_logic := '0';
+signal fifo_rd_en   : std_logic := '0';
+signal fifo_dout    : std_logic_vector (63 downto 0) := (others => '0');
+signal fifo_full    : std_logic := '0';
+signal fifo_empty   : std_logic := '0';
 
-signal S_AXI_araddr          :  STD_LOGIC_VECTOR ( 29 downto 0 ) := (others => '0');
-signal araddr                :  STD_LOGIC_VECTOR ( 29 downto 0 ) := (others => '0');
+signal S_AXI_araddr          :  STD_LOGIC_VECTOR ( 30 downto 0 ) := (others => '0');
+signal araddr                :  STD_LOGIC_VECTOR ( 30 downto 0 ) := (others => '0');
 signal S_AXI_arburst         :  STD_LOGIC_VECTOR ( 1 downto 0 ) := (others => '0');
 signal S_AXI_arcache         :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0');
 signal S_AXI_arid            :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0');
@@ -135,8 +142,8 @@ signal S_AXI_arready         :  STD_LOGIC := '0';
 signal S_AXI_arsize          :  STD_LOGIC_VECTOR ( 2 downto 0 ) := (others => '0');
 signal S_AXI_arvalid         :  STD_LOGIC := '0';
 signal arvalid               :  STD_LOGIC := '0';
-signal S_AXI_awaddr          :  STD_LOGIC_VECTOR ( 29 downto 0 ) := (others => '0');
-signal awaddr                :  STD_LOGIC_VECTOR ( 29 downto 0 ) := (others => '0');
+signal S_AXI_awaddr          :  STD_LOGIC_VECTOR ( 30 downto 0 ) := (others => '0');
+signal awaddr                :  STD_LOGIC_VECTOR ( 30 downto 0 ) := (others => '0');
 signal S_AXI_awburst         :  STD_LOGIC_VECTOR ( 1 downto 0 ) := (others => '0');
 signal S_AXI_awcache         :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0');
 signal S_AXI_awid            :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0');
@@ -152,19 +159,19 @@ signal S_AXI_bid             :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0
 signal S_AXI_bready          :  STD_LOGIC := '0';
 signal S_AXI_bresp           :  STD_LOGIC_VECTOR ( 1 downto 0 ) := (others => '0');
 signal S_AXI_bvalid          :  STD_LOGIC := '0';
-signal S_AXI_rdata           :  STD_LOGIC_VECTOR ( 255 downto 0 ) := (others => '0');
+signal S_AXI_rdata           :  STD_LOGIC_VECTOR ( 511 downto 0 ) := (others => '0');
 signal S_AXI_rid             :  STD_LOGIC_VECTOR ( 3 downto 0 ) := (others => '0');
 signal S_AXI_rlast           :  STD_LOGIC := '0';
 signal S_AXI_rready          :  STD_LOGIC := '0';
 signal S_AXI_rresp           :  STD_LOGIC_VECTOR ( 1 downto 0 ) := (others => '0');
 signal S_AXI_rvalid          :  STD_LOGIC := '0';
-signal S_AXI_wdata           :  STD_LOGIC_VECTOR ( 255 downto 0 ) := (others => '0');
-signal wdata                 :  STD_LOGIC_VECTOR ( 255 downto 0 ) := (others => '0');
+signal S_AXI_wdata           :  STD_LOGIC_VECTOR ( 511 downto 0 ) := (others => '0');
+signal wdata                 :  STD_LOGIC_VECTOR ( 511 downto 0 ) := (others => '0');
 signal S_AXI_wlast           :  STD_LOGIC := '0';
 signal wlast                 :  STD_LOGIC := '0';
 signal S_AXI_wready          :  STD_LOGIC := '0';
-signal S_AXI_wstrb           :  STD_LOGIC_VECTOR ( 31 downto 0 ) := (others => '0');
-signal wstrb                 :  STD_LOGIC_VECTOR ( 31 downto 0 ) := (others => '0');
+signal S_AXI_wstrb           :  STD_LOGIC_VECTOR ( 63 downto 0 ) := (others => '0');
+signal wstrb                 :  STD_LOGIC_VECTOR ( 63 downto 0 ) := (others => '0');
 signal S_AXI_wvalid          :  STD_LOGIC := '0';
 signal wvalid                :  STD_LOGIC := '0';
 signal init_calib_complete   :  STD_LOGIC := '0';
@@ -240,7 +247,7 @@ signal cnt_rlast: integer := 0;
 type state_t is (idle, w, r);
 signal w_r : state_t := r;
 
-signal pseudo_address : std_logic_vector(29 downto 0) := (others => '0');
+signal pseudo_address : std_logic_vector(30 downto 0) := (others => '0');
 signal count_w_valid : integer := 0;
 signal ctr_state     : integer := 0;
 signal temp          : std_logic_vector(63 downto 0) :=  (others => '0');
@@ -255,20 +262,23 @@ signal reset1        : std_logic := '0';
 signal reset2        : std_logic := '0';
 signal ctr_repeat    : std_logic := '0';
 
--------- Array-------
 signal i_count  : integer := 0;
 signal check1   : std_logic := '0';
-signal check    : integer := 0;
+signal check    : std_logic_vector(31 downto 0) := (others => '0');
 signal cnt      : integer := 0;
-signal data_zero: std_logic_vector(255 downto 0) := (others => '0');
+signal data_zero: std_logic_vector(511 downto 0) := (others => '0');
 signal count : integer := 0;
 signal number_read: integer := 0;
+type state_type is (one,two,three);
+signal state_r : state_type;
 signal one_pulse : std_logic;
-signal s_check  : std_logic_vector(31 downto 0);
+
+signal number_of_count : std_logic_vector(31 downto 0) := x"00000500";
+signal zero : std_logic_vector(9 downto 0) := (others => '0');
 
 begin
 
-s_check <=  conv_std_logic_vector(check,s_check'length); -- convert for uart
+s_check <=  check; -- convert for uart
 
 count_number_of_read_req: process(clk)
 begin
@@ -286,24 +296,27 @@ reset   <= reset_rtl;
 resetn  <= not reset;
 
 
-uart_pr : uart
-port map
-(
-    clk       => clk_50M,
-    reset_n     => '1',
-    tx_ena      => tx_ena,
-    tx_data     => tx_data,
-    rx          => rx,
-    rx_busy     => rx_busy,
-    rx_error    => rx_error,
-    rx_data     => rx_data,
-    tx_busy     => tx_busy,
-    tx          => tx
-);
+--uart_pr : uart
+--port map
+--(
+--    clk       => clk_50M,
+--    reset_n     => '1',
+--    tx_ena      => tx_ena,
+--    tx_data     => tx_data,
+--    rx          => rx,
+--    rx_busy     => rx_busy,
+--    rx_error    => rx_error,
+--    rx_data     => rx_data,
+--    tx_busy     => tx_busy,
+--    tx          => tx
+--);
 
-uart_tx <= tx;
+--uart_tx <= tx;
 
 crc_flow_hash64_inst1: crc_flow_hash64
+generic map(
+    init_sip => x"1111_1111_0000_0000_0000_0000_0808_5555"
+ )
 port map
 (
     clk     =>  clk,
@@ -313,6 +326,9 @@ port map
 );
 
 crc_flow_hash64_inst2: crc_flow_hash64
+generic map(
+    init_sip => x"1111_1111_0000_0000_0000_0000_0808_5555"
+ )
 port map
 (
     clk     =>  clk,
@@ -322,6 +338,9 @@ port map
 );
 
 crc_flow_hash64_inst3: crc_flow_hash64
+generic map(
+    init_sip => x"1111_1111_0000_0000_0000_0000_0808_5555"
+ )
 port map
 (
     clk     =>  clk,
@@ -329,31 +348,31 @@ port map
     crc_en  =>  s_crc_en2,
     crc_out =>  data_out2
 );
-uart_control_pr: process(clk_50M) 
-    variable data_t : std_logic_vector(7 downto 0) := (others => '0');  
-begin 
-    if rising_edge(clk_50M) then 
-        case time_2s is 
-            when '0' =>
-                if i >=  0 then 
-                    if tx_busy = '0' then 
-                        tx_ena <= '1';                  
-                        data_t := data(8*i+ 7 downto 8*i);
-                    end if;
-                    if tx_ena = '1' then
-                        tx_ena <= '0';
-                        i      <= i - 1;
-                    end if;
-                    tx_data    <= data_t; 
-                else 
-                    data       <= (others => '0');
-                end if;
-            when others => 
-               i    <= 3;
-               data <= s_check;
-        end case;
-    end if;
-end process;
+--uart_control_pr: process(clk_50M) 
+--    variable data_t : std_logic_vector(7 downto 0) := (others => '0');  
+--begin 
+--    if rising_edge(clk_50M) then 
+--        case time_2s is 
+--            when '0' =>
+--                if i >=  0 then 
+--                    if tx_busy = '0' then 
+--                        tx_ena <= '1';                  
+--                        data_t := data(8*i+ 7 downto 8*i);
+--                    end if;
+--                    if tx_ena = '1' then
+--                        tx_ena <= '0';
+--                        i      <= i - 1;
+--                    end if;
+--                    tx_data    <= data_t; 
+--                else 
+--                    data       <= (others => '0');
+--                end if;
+--            when others => 
+--               i    <= 3;
+--               data <= s_check;
+--        end case;
+--    end if;
+--end process;
 
 
 time_2s_pr: process(clk_50M) 
@@ -386,11 +405,11 @@ begin
     end if;
 end process;
 
-
 bready <= '1';
 rready <= '1';
 
 awvalid_pr: process(clk)
+    variable count : std_logic_vector(31 downto 0) := (others => '0');
 begin
     if rising_edge(clk) then
         if reset = '1' then
@@ -408,10 +427,10 @@ begin
                 when 2 =>
                     if s_axi_awready = '1' then
                         awvalid     <= '0';
-                        if s_axi_bvalid = '1' and s_axi_bready = '1' then 
+                    end if;
+                    if s_axi_bvalid = '1' and s_axi_bready = '1' then 
                         awr_state   <= 1;
                         count_w     <= count_w + 1;
-                        end if;
                     end if;
                 when others =>
             end case;
@@ -420,8 +439,8 @@ begin
 end process;
 
 s_crc_en <=  awvalid and s_axi_awready;
-awaddr   <=  data_out(29 downto 8) & X"00" when awvalid = '1' and s_axi_awready = '1' else
-             (others => '0')        	   when reset = '1';
+awaddr   <=  data_out(30 downto 10) & zero when awvalid = '1' and s_axi_awready = '1' else
+             (others => '0')        when reset = '1';
 
 wstrb <= (others => '1');
 
@@ -436,17 +455,17 @@ begin
                 when 0 =>
                     if awvalid = '1' and s_axi_awready = '1' then
                         wr_state       <= 1;
-                        pseudo_address <= data_out(29 downto 0);
+                        pseudo_address <= data_out(30 downto 0);
                     end if;
                 when 1 =>               
                     if s_axi_wready = '1' then
                         wvalid <= '1';
                         if cnt_block < number_of_block - 1 then
                             cnt_block      <= cnt_block + 1;
-                            wdata          <= data_zero(255 downto 30) & pseudo_address + 1;
+                            wdata          <= data_zero(511 downto 31) & pseudo_address + 1;
                             pseudo_address <= pseudo_address + 1;
                         else
-                            wdata     <= data_zero(255 downto 30) & pseudo_address + 1;
+                            wdata     <= data_zero(511 downto 31) & pseudo_address + 1;
                             cnt_block <= 0;
                             wlast     <= '1';
                             wr_state  <= 2;
@@ -457,8 +476,8 @@ begin
                         wvalid  <= '0';
                         wlast   <= '0';
                         wr_state<= 0;
-                            if cnt_num_addr < 9 then -- ghi 10 lan
---                            if cnt_num_addr < 999 then -- ghi 1,000 lan
+--                            if cnt_num_addr < 9 then -- ghi 10 lan
+                            if cnt_num_addr < number_of_count - 1 then -- ghi 1,000 lan
 --                            if cnt_num_addr < 999999 then -- ghi 1,000,000 lan
 --                            if cnt_num_addr < 9999999 then -- ghi 10,000,000 lan
                                 cnt_num_addr <= cnt_num_addr + 1;                           
@@ -501,8 +520,8 @@ begin
                      end if;
                      
                 when 3 =>
-                        if count_r < 9 then -- doc 10 lan
---                        if count_r < 999 then -- doc 1,000 lan
+--                        if count_r < 9 then -- doc 10 lan
+                        if count_r < number_of_count - 1 then -- doc 1,000 lan
 --                        if count_r < 999999 then -- doc 1,000,000 lan
 --                        if count_r < 9999999 then -- doc 10,000,000 lan
                            count_r <= count_r + 1;
@@ -528,47 +547,46 @@ begin
 end process;
 
 s_crc_en1   <=  arvalid and s_axi_arready;
-araddr      <=  data_out1(29 downto 8) & X"00" when arvalid = '1' and s_axi_arready = '1' else
-           		(others => '0')        when reset = '1';
-		   
-
+araddr      <=  data_out1(30 downto 10) & zero when arvalid = '1' and s_axi_arready = '1' else
+           (others => '0')        when reset = '1';
 
 compare_value : process(clk)
 begin
     if rising_edge(clk) then
         if s_axi_rvalid = '1' then
             if cnt = 0 then
-                if s_axi_rdata(29 downto 0)  /= data_out2(29 downto 0) + 1 or s_axi_rdata(255 downto 30) /= 0 then
+                if s_axi_rdata(30 downto 0)  /= (data_out2(30 downto 10) & zero) + 1 or s_axi_rdata(511 downto 31) /= 0 then
                     check1	<= '1';
                 end if;
                 cnt <= 1;
             elsif cnt = 1 then
-                if s_axi_rdata(29 downto 0)  /= data_out2(29 downto 0) + 2 or s_axi_rdata(255 downto 30) /= 0 then
+                if s_axi_rdata(30 downto 0)  /= (data_out2(30 downto 10) & zero) + 2 or s_axi_rdata(511 downto 31) /= 0 then
                     check1 <= '1';
                 end if;
                 cnt <= 2;
             elsif cnt = 2 then
-                if s_axi_rdata(29 downto 0)  /= data_out2(29 downto 0) + 3 or s_axi_rdata(255 downto 30) /= 0 then
+                if s_axi_rdata(30 downto 0)  /= (data_out2(30 downto 10) & zero) + 3 or s_axi_rdata(511 downto 31) /= 0 then
                     check1 <= '1';
                 end if;
                 cnt <= 3;
             elsif cnt = 3 then
-                if s_axi_rdata(29 downto 0) /= data_out2(29 downto 0) + 4 or s_axi_rdata(255 downto 30) /= 0 then
-                    check <= check + 1;
+                if s_axi_rdata(30 downto 0)  = (data_out2(30 downto 10) & zero) + 4 and s_axi_rdata(511 downto 31) = 0 and check1 ='0'  then
+                    check  <= check + 1;
                 end if;
-				check1	  <= '0';
-                cnt 	  <= 0;
+                check1 	<= '0';
+                cnt 	<= 0;
             end if;
         end if;
     end if;
 end process;
 
+
 s_crc_en2   <= (s_axi_rvalid and s_axi_rlast); 
 cnt_block_rdata_pr: process(clk)
 begin
     if rising_edge(clk) then
-        if cnt_rlast < 10 then  -- doc 10 - lan sau cmt vao troi
---        if cnt_rlast < 1000 then  -- doc 1,000 
+--        if cnt_rlast < 10 then  -- doc 10 - lan sau cmt vao troi
+        if cnt_rlast < number_of_count then  -- doc 1,000 
 --        if cnt_rlast < 1000000 then  -- doc 1,000,000 
 --        if cnt_rlast < 10_000_000 then  -- doc 10,000,000 
             if s_axi_rvalid = '1' and s_axi_rlast = '1' then
@@ -583,8 +601,8 @@ end process;
 s_reset1_pr: process(clk)
 begin
     if rising_edge(clk) then
-        if cnt_rlast = 10 then    -- doc 10 lan thi count 10 cai last
---        if cnt_rlast = 1000 then    -- doc 1,000
+--        if cnt_rlast = 10 then    -- doc 10 lan thi count 10 cai last
+        if cnt_rlast = number_of_count then    -- doc 1,000
 --        if cnt_rlast = 1000000 then    -- doc 1,000,000
 --        if cnt_rlast = 10_000_000 then    -- doc 10,000,000
             s_reset2    <= '1';
@@ -598,7 +616,7 @@ begin
  begin
     if rising_edge(clk) then
         if s_reset2 = '1' then
-            number_read <= number_read + 1;
+            number_read<= number_read + 1;
         end if;
     end if;
  end process;
